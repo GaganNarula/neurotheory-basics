@@ -3,8 +3,8 @@
 import datetime
 import uuid
 import numpy as np
-import scipy
 import matplotlib.pyplot as plt
+from filters import SpikeTrainFilter
 
 
 def spike_sequence_from_spike_times(
@@ -65,29 +65,6 @@ def global_spike_count_rate(spike_sequence: np.ndarray, duration: int) -> float:
     :rtype: float
     """
     return num_spikes(spike_sequence) / duration
-
-
-def smoothed_firing_rate(
-    spike_sequence: np.ndarray, averaging_window_length: int = 3, mode: str = "same"
-) -> np.ndarray:
-    """Smoothed firing rate of a single spike sequence. The smoothed firing rate is
-    obtained by convolving the spike sequence with a rectangular window.
-
-    :param spike_sequence: input spike sequence
-    :type spike_sequence: np.ndarray
-    :param averaging_window_length: length of the averaging window
-    :type averaging_window_length: int, optional
-    :param mode: mode of the convolution
-    :type mode: str, optional
-
-    :return: smoothed firing rate
-    :rtype: np.ndarray
-    """
-    return scipy.signal.convolve(
-        spike_sequence,
-        np.ones(averaging_window_length) / averaging_window_length,
-        mode=mode,
-    )
 
 
 def spiketimes_from_poisson_distribution(
@@ -215,9 +192,13 @@ class SpikeTrain:
         """Return the spike count rate of the spike train."""
         return global_spike_count_rate(self.spike_sequence, self.duration_samples)
 
-    def smoothed_firing_rate(self, averaging_window_length: int = 3) -> np.ndarray:
+    def smoothed_firing_rate(
+        self, kernel_type: str = "alpha", **filter_kwargs
+    ) -> np.ndarray:
         """Return the smoothed firing rate of the spike train."""
-        return smoothed_firing_rate(self.spike_sequence, averaging_window_length)
+        return SpikeTrainFilter(kernel=kernel_type, **filter_kwargs).filter(
+            self.spike_sequence
+        )
 
     def plot(self) -> None:
         """Plot the spike train."""
